@@ -6,30 +6,48 @@
 
 ---
 
-## 🟡 CURRENT STATUS (as of this write)
+## 🟢 CURRENT STATUS (as of this write)
 
-**Phase:** Service code is built and pushed. **Blocked on Bayo provisioning
-the Oracle Cloud VPS** — nothing further can happen until that exists.
+**Phase:** Service code built AND already wired into `bloom-agent-v2/app.js`.
+**Blocked on Bayo provisioning the Oracle Cloud VPS** — the wiring is live
+but dormant (safe no-op) until the VPS URL is added to Firestore.
 
 **What's done:**
 - ✅ `main.py` — PaddleOCR FastAPI service, column-aware ledger parsing
 - ✅ `requirements.txt` — pinned deps
 - ✅ `deploy.sh` — one-shot install/deploy script for Ubuntu 22.04 ARM
 - ✅ Repo created: `github.com/KobOmoba/edubloom-ocr-service`
+- ✅ **`bloom-agent-v2/app.js` already wired** — `callPaddleOCR()` function
+  added, `buildCascade()` tries it FIRST (before Together/Groq/Mistral/HF),
+  `_getApiKeys()` fetches `ocrServiceUrl` from Firestore
+  `admin_settings/main`. **This is dormant/safe** — if `ocrServiceUrl` is
+  empty (current state), PaddleOCR is skipped entirely and the existing
+  free vision-LLM cascade runs exactly as before. Zero risk pushing this
+  ahead of the VPS existing.
+- ✅ `index.html` cache-busted to v8 (bump this again after ANY further
+  app.js change or Bayo's browser won't see it — this has bitten us
+  before)
 
 **What's NOT done yet:**
-- ⬜ Oracle VPS is not provisioned yet (Bayo's action — see "What Bayo needs
-  to do" below)
+- ⬜ Oracle VPS is not provisioned yet (Bayo's action — see below)
 - ⬜ Service has never been deployed or tested against a real ledger photo
-- ⬜ `bloom-agent-v2/app.js` has NOT been wired to call this service yet —
-  it still uses the old browser-side Groq/Mistral/Together/HF cascade
-- ⬜ Basic vs Premium OCR gating (decided, not yet built — see Decisions
-  Log below)
+- ⬜ `ocrServiceUrl` field does not exist in Firestore yet — needs to be
+  added to `admin_settings/main` once VPS is live
+- ⬜ Basic vs Premium OCR gating (decided, not yet built — this applies to
+  the future school-app manual-entry OCR, NOT the agent app, which is
+  intentionally always-free/ungated — see Decisions Log)
 
 **Next action for whoever picks this up:** ask Bayo if the Oracle VPS is
-live yet. If yes, get the public IP, deploy via `deploy.sh`, test
-`/health`, then wire `bloom-agent-v2/app.js` to call it. If no, nothing
-else to do here yet — don't start rebuilding the cascade logic again.
+live yet.
+- If YES: get the public IP → SSH in → `git clone` this repo →
+  `bash deploy.sh` → test `/health` → add `ocrServiceUrl` field
+  (e.g. `"http://123.45.67.89"`, no trailing slash) to Firestore
+  `admin_settings/main` → done, agent app picks it up automatically on
+  next load, no further code changes needed.
+- If NO: nothing else to build here. Don't touch `bloom-agent-v2/app.js`
+  ledger-scanning code again until the VPS exists and you can actually
+  test against it — untestable changes are how we ended up in repeated
+  break/fix cycles before.
 
 ---
 
